@@ -88,6 +88,7 @@ function onReceiveStream(peerInfo, stream){
     peers[peerInfo.peerId].audio.remove();
   }
   peers[peerInfo.peerId].audio = audio;
+  redraw();
 }
 
 var peerReady = false;
