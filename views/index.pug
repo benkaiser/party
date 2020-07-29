@@ -1,5 +1,13 @@
 extends layout
 
 block content
+  div.offscreen
+    div#player
+  .musiccontrols
+    .infoLine
+      .musicIcon 🔊
+      #musicTitle No Music Playing
+    .controls
+      button#loadTrack Load Track
   canvas#canvas
   script(src="/js/main.js")

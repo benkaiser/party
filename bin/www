@@ -6,7 +6,21 @@
 
 var app = require('../app');
 var debug = require('debug')('party:server');
+var https = require('https');
 var http = require('http');
+const fs = require('fs');
+const path = require('path');
+
+let serverCreater = http.createServer;
+if (process.env.MODE === 'development') {
+  const options = {
+    pfx: fs.readFileSync(path.join(__dirname, '..', 'cert', 'party.pfx')),
+    passphrase: 'party'
+  };
+
+  serverCreater = https.createServer.bind(this, options);
+}
+
 
 /**
  * Get port from environment and store in Express.
@@ -19,7 +33,12 @@ app.set('port', port);
  * Create HTTP server.
  */
 
-var server = http.createServer(app);
+ const musicTrack = {
+   id: '5Di20x6vVVU',
+   startTime: (+new Date())
+ };
+
+var server = serverCreater(app);
 var io = require('socket.io')(server);
 io.on('connection', (socket) => {
   console.log('a user connected');
@@ -39,17 +58,24 @@ io.on('connection', (socket) => {
     var room = io.in("mainroom");
     if (room) {
       Object.keys(room.sockets).forEach((key) => {
-        var client = room.sockets[key]; 
+        var client = room.sockets[key];
         if (socket !== client) {
           socket.emit('joiner', client.info);
         }
       });
     }
+    socket.emit('music', musicTrack);
   });
 
   socket.on('updateInfo', function(updatedInfo) {
     socket.info = updatedInfo;
     socket.broadcast.emit('updateInfo', updatedInfo);
+  });
+
+  socket.on('setMusic', (id) => {
+    musicTrack.id = id;
+    musicTrack.startTime = (+new Date());
+    io.to("mainroom").emit('music', musicTrack);
   });
 });
 
@@ -120,6 +146,3 @@ function onListening() {
     : 'port ' + addr.port;
   debug('Listening on ' + bind);
 }
-
-const { PeerServer } = require('peer');
-const peerServer = PeerServer({ port: 9000, path: '/party' });
