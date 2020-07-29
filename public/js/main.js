@@ -11,6 +11,7 @@ var player;
 var youtubeReady = false;
 let jumpedForVideo = false;
 let resolveYoutubeReady;
+let youtubeVolume = 100;
 const playerReadyPromise = new Promise((resolve, reject) => {
   resolveYoutubeReady = resolve;
 });
@@ -194,30 +195,6 @@ function onRemoteTrack(track) {
   }
 }
 
-// const peer = new Peer({
-//   host: window.location.hostname,
-//   port: 9000,
-//   path: '/party'
-// });
-
-// peer.on('open', function(id) {
-//   console.log('Peer ready (' + id + ')');
-//   myInfo.peerId = id;
-//   onPeerReady();
-// });
-
-// peer.on('connection', function(conn) {
-//   console.log(conn);
-// });
-
-// peer.on('call', function(call) {
-//   requestMediaStream()
-//   .then(mediaStream => {
-//     call.answer(mediaStream);
-//   });
-//   call.on('stream', onReceiveStream.bind(null, peers[call.peer]));
-// });
-
 var socket = io();
 socket.on('connect', () => {
   console.log('Socket ready');
@@ -306,7 +283,7 @@ function updateYoutubeVolume() {
   console.log('Music Distance: ' + distance);
   console.log('Music Volume: ' + volume);
   if (youtubeReady) {
-    player.setVolume(Math.min(volume * 1.5 * 100, 100));
+    player.setVolume(Math.min(volume * 1.5 * 100, 100) * youtubeVolume / 100);
   }
 }
 
@@ -327,7 +304,7 @@ function onFrame() {
 
   // ctx.fillRect(50, 50, 50 * Math.random(), 500 * Math.random());
   ctx.font = "30px Arial";
-  ctx.fillText("Me", w * myInfo.x, h * myInfo.y);
+  ctx.fillText(username, w * myInfo.x, h * myInfo.y);
 
 
   getPeersWithAudio().forEach(peer => {
@@ -372,6 +349,10 @@ document.getElementById('loadTrack').addEventListener('click', () => {
   const id = youtube_parser(url);
   socket.emit('setMusic', id);
 });
+document.getElementById('volumeSlider').oninput = function() {
+  youtubeVolume = this.value;
+  updateYoutubeVolume();
+}
 
 function youtube_parser(url){
   var regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
