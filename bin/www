@@ -33,10 +33,15 @@ app.set('port', port);
  * Create HTTP server.
  */
 
- const musicTrack = {
-   id: '5Di20x6vVVU',
-   startTime: (+new Date())
- };
+const musicTrack = {
+  id: '5Di20x6vVVU',
+  startTime: (+new Date())
+};
+const rooms = {};
+
+function roomName(name) {
+  return 'room_' + name;
+}
 
 var server = serverCreater(app);
 var io = require('socket.io')(server);
@@ -44,38 +49,49 @@ io.on('connection', (socket) => {
   console.log('a user connected');
   socket.on('disconnect', () => {
     console.log('user disconnected');
+    if (socket && socket.info && socket.info.room) {
+      socket.to(roomName(socket.info.room)).emit('leaver', socket.info);
+    }
     socket.leaveAll();
-    socket.broadcast.emit('leaver', socket.info);
   });
   socket.on('join', function(joinObj){
-    console.log('joined room: ' + joinObj.name);
-    socket.join('mainroom');
+    const joinedRoom = roomName(joinObj.room);
+    console.log('joined room (' + joinedRoom + '): ' + joinObj.name);
+    socket.join(joinedRoom);
     socket.info = joinObj;
-    socket.broadcast.emit('joiner', joinObj);
+    socket.to(joinedRoom).emit('joiner', joinObj);
+    if (rooms[joinedRoom] === undefined) {
+      rooms[joinedRoom] = {
+        music: musicTrack
+      };
+    }
 
     // inform the client of all the other sockets in the room
-    // var room = io.sockets.adapter.rooms['mainroom'].sockets;
-    var room = io.in("mainroom");
-    if (room) {
-      Object.keys(room.sockets).forEach((key) => {
-        var client = room.sockets[key];
-        if (socket !== client) {
-          socket.emit('joiner', client.info);
+    io.of('/').in(joinedRoom).clients(function(error, clients){
+      clients.forEach((id) => {
+        const otherSocket = io.sockets.connected[id]
+        if (socket !== otherSocket) {
+          socket.emit('joiner', otherSocket.info);
         }
       });
-    }
-    socket.emit('music', musicTrack);
+    });
+
+    socket.emit('music', rooms[joinedRoom].music);
   });
 
   socket.on('updateInfo', function(updatedInfo) {
     socket.info = updatedInfo;
-    socket.broadcast.emit('updateInfo', updatedInfo);
+    socket.to(roomName(socket.info.room)).emit('updateInfo', updatedInfo);
   });
 
   socket.on('setMusic', (id) => {
-    musicTrack.id = id;
-    musicTrack.startTime = (+new Date());
-    io.to("mainroom").emit('music', musicTrack);
+    const room = roomName(socket.info.room);
+    console.log('Updating music for room: ' + room);
+    rooms[room].music = {
+      id: id,
+      startTime: (+new Date())
+    };
+    io.in(room).emit('music', rooms[room].music);
   });
 });
 

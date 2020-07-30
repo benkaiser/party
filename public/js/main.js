@@ -1,6 +1,6 @@
 var searchParams = new URLSearchParams(window.location.search);
 var username = searchParams.get('name');
-var roomName = searchParams.get('room') || 'liveparty2020';
+var roomName = window.location.pathname.replace('/','').toLocaleLowerCase() || 'liveparty2020';
 const peers = {};
 let music = {};
 let localTracks = {};
@@ -21,6 +21,7 @@ if (!username) {
 }
 const myInfo = {
   name: username,
+  room: roomName,
   participantId: null,
   x: 0.1,
   y: 0.1
@@ -216,8 +217,10 @@ socket.on('updateInfo', (peerInfo) => {
   redraw();
 });
 socket.on('leaver', (peerInfo) => {
-  console.log('Peer left: ' + peerInfo.name);
-  delete peers[peerInfo.participantId];
+  console.log('Peer left: ' + (peerInfo ? peerInfo.name : ''));
+  if (peerInfo) {
+    delete peers[peerInfo.participantId];
+  }
   redraw();
 });
 socket.on('music', (musicInfo) => {
@@ -341,7 +344,9 @@ document.getElementById('canvas').addEventListener('click', (event) => {
   myInfo.y = event.clientY / window.innerHeight;
   socket.emit('updateInfo', myInfo);
   redraw();
-  player.playVideo();
+  if (player) {
+    player.playVideo();
+  }
   return false;
 });
 document.getElementById('loadTrack').addEventListener('click', () => {
@@ -353,6 +358,10 @@ document.getElementById('volumeSlider').oninput = function() {
   youtubeVolume = this.value;
   updateYoutubeVolume();
 }
+window.addEventListener('resize', () => {
+  redraw();
+});
+
 
 function youtube_parser(url){
   var regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
